@@ -9,8 +9,8 @@ experiment = Experiment(api_key="laHAJPKUmrD2TV2dIaOWFYGkQ",
                                 project_name="learning-sensitive-features", workspace="yamad07")
 
 dataset = SensitiveDataset(
-        content_root_dir="./rkrkrk/",
-        style_root_dir="./visualmemories_/",
+        content_root_dir="./images/rkrkrk/",
+        style_root_dir="./images/visualmemories_/",
         transform=transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(

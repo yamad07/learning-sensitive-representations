@@ -57,23 +57,14 @@ class Trainer(object):
                 all_local_source_features, local_source_features = self.local_encoder(source_images)
                 all_sensitive_source_features, sensitive_source_features = self.sensitive_encoder(
                         source_images)
-                sensitive_source_features = F.interpolate(
-                        sensitive_source_features, size=(
-                            local_source_features.size(2),
-                            local_source_features.size(3),
-                            ))
-                joint_features = torch.mul(
-                        local_source_features,
-                        sensitive_source_features)
+                joint_features = self._ada_in(local_source_features, sensitive_source_features)
                 decode_images = self.decoder(joint_features)
 
                 reconstruction_loss = F.mse_loss(source_images, decode_images)
 
                 all_local_another_features, local_another_features = self.local_encoder(another_images)
                 all_sensitive_another_features, sensitive_another_features = self.sensitive_encoder(another_images)
-                joint_features = torch.mul(
-                        local_another_features,
-                        sensitive_source_features)
+                joint_features = self._ada_in(local_another_features, sensitive_source_features)
 
                 all_decode_sensitive_source_features, decode_sensitive_source_features = self.sensitive_encoder(
                         self.decoder(joint_features))
@@ -91,20 +82,12 @@ class Trainer(object):
                         sensitive_source_features,
                         decode_sensitive_source_features,
                         )
-                sensitive_another_features = F.interpolate(
-                        sensitive_another_features, size=(
-                            local_another_features.size(2),
-                            local_another_features.size(3),
-                            ))
-                joint_features = torch.mul(
-                        local_source_features,
-                        sensitive_another_features)
+
                 all_decode_local_source_features, decode_local_source_features = self.local_encoder(
                         self.decoder(joint_features))
                 reconstruction_local_features_loss = F.mse_loss(
                         local_source_features,
                         decode_local_source_features)
-
 
                 loss = self.alpha * reconstruction_loss + self.beta * reconstruction_sensitive_features_loss + \
                         self.gamma * reconstruction_local_features_loss
@@ -131,3 +114,13 @@ class Trainer(object):
             print("Epoch: {} ReconLoss: {} SensitiveFeatureLoss: {} LocalFeatureLoss: {} TotalLoss: {}".format(
                 epoch, reconstruction_loss, reconstruction_sensitive_features_loss,
                 reconstruction_local_features_loss, loss))
+
+    def _ada_in(self, content, style):
+        style_mean = style.mean(
+                (2, 3)).unsqueeze(2).unsqueeze(3).expand(
+                        tuple(content.size()))
+        style_var = style.view(
+                style.size(0), style.size(1), -1).var(2).unsqueeze(2).unsqueeze(3).expand(
+                        tuple(content.size()))
+
+        return torch.mul(content, style_var) + style_mean
