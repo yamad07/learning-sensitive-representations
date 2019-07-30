@@ -1,3 +1,4 @@
-sklearn
 torch
-skimage
+torchvision
+sklearn
+sciki-image

@@ -1,6 +1,7 @@
 version: '2.3'
 services:
   experiment:
+    tty: true
     ports: ['8888:8888']
     runtime: nvidia
     volumes: ['..:/app']
