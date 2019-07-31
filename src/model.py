@@ -7,32 +7,22 @@ class LocalEncoder(nn.Module):
 
     def __init__(self):
         super(LocalEncoder, self).__init__()
-        self.l1 = local_conv_layer(3, 128, 3)
-        self.l2 = local_conv_layer(128, 128, 3)
-        self.l3 = local_conv_layer(128, 256, 3)
-        self.l4 = local_conv_layer(256, 256, 3, nn.Tanh)
+        self.vgg = models.vgg16(pretrained=True).features
 
     def forward(self, x):
-        h1 = self.l1(x)
-        h2 = self.l2(h1)
-        h3 = self.l3(h2)
-        h4 = self.l4(h3)
-        return (h1, h2, h3, h4), h4
+        h = self.vgg(x)
+        return (h), h
 
 
 class SensitiveEncoder(nn.Module):
 
     def __init__(self):
         super(SensitiveEncoder, self).__init__()
-        self.l1 = sensitive_conv_layer(3, 128, 3)
-        self.l2 = sensitive_conv_layer(128, 128, 3)
-        self.l3 = sensitive_conv_layer(128, 256, 3, nn.Tanh)
+        self.resnet = nn.Sequential(*list(models.resnet50(pretrained=True).children())[:-3])
 
     def forward(self, x):
-        h1 = self.l1(x)
-        h2 = self.l2(h1)
-        h3 = self.l3(h2)
-        return (h1, h2, h3), h3
+        h = self.resnet(x)
+        return (h), h
 
 class Decoder(nn.Module):
 
