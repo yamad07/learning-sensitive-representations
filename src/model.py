@@ -75,7 +75,6 @@ def sensitive_conv_layer(input_dim, output_dim, kernel_size, Active=nn.ReLU):
             nn.MaxPool2d(kernel_size=2, stride=2),
             )
 
-
 def decoder_layer(input_dim, output_dim,
                   kernel_size, padding=1):
     return nn.Sequential(

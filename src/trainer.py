@@ -67,11 +67,11 @@ class Trainer(object):
                             sensitive_source_features.view(
                                 sensitive_source_features.size(0),
                                 sensitive_source_features.size(1),
-                                -1).var(1),
+                                -1).var(2),
                             decode_sensitive_source_features.view(
                                 sensitive_source_features.size(0),
                                 sensitive_source_features.size(1),
-                                -1).var(1),
+                                -1).var(2),
                             )
                 reconstruction_sensitive_features_loss += F.mse_loss(
                         sensitive_source_features,
