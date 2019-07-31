@@ -19,7 +19,7 @@ dataset = SensitiveDataset(
             )]
         )
         )
-dataloader = DataLoader(dataset, batch_size=8, shuffle=True)
+dataloader = DataLoader(dataset, batch_size=16, shuffle=True)
 
 trainer = Trainer(
         local_encoder=LocalEncoder(),

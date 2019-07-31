@@ -16,7 +16,7 @@ class Trainer(object):
             experiment,
             alpha=10.0,
             beta=5.0,
-            gamma=1,
+            gamma=5.0,
             delta=1,
             ):
 
@@ -70,12 +70,15 @@ class Trainer(object):
                 all_decode_sensitive_source_features, decode_sensitive_source_features = self.sensitive_encoder(
                         self.decoder(joint_features))
 
-                reconstruction_sensitive_features_loss = 0
+                reconstruction_sensitive_features_loss += F.mse_loss(
+                        sensitive_source_features,
+                        decode_sensitive_source_features,
+                        )
                 for (decode_sensitive_source_features, sensitive_source_features) in zip(
                         all_decode_sensitive_source_features, all_sensitive_source_features):
                     reconstruction_sensitive_features_loss += F.mse_loss(
-                            sensitive_source_features.mean((2, 3)),
-                            decode_sensitive_source_features.mean((2, 3))) + \
+                            sensitive_source_features.mean(2),
+                            decode_sensitive_source_features.mean(2)) + \
                                     F.mse_loss(
                             sensitive_source_features.view(
                                 sensitive_source_features.size(0),
