@@ -1,6 +1,7 @@
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
+from .module import ada_in
 import os
 
 
@@ -34,7 +35,7 @@ class Trainer(object):
         self.beta = beta
         self.gamma = gamma
         self.delta = delta
-        self.device = torch.device("cuda:1")
+        self.device = torch.device("cuda:0")
         self.experiment = experiment
         self.weight_path = "./weights/"
 
@@ -57,14 +58,14 @@ class Trainer(object):
                 all_local_source_features, local_source_features = self.local_encoder(source_images)
                 all_sensitive_source_features, sensitive_source_features = self.sensitive_encoder(
                         source_images)
-                joint_features = self._ada_in(local_source_features, sensitive_source_features)
+                joint_features = ada_in(local_source_features, sensitive_source_features)
                 decode_images = self.decoder(joint_features)
 
                 reconstruction_loss = F.mse_loss(source_images, decode_images)
 
                 all_local_another_features, local_another_features = self.local_encoder(another_images)
                 all_sensitive_another_features, sensitive_another_features = self.sensitive_encoder(another_images)
-                joint_features = self._ada_in(local_another_features, sensitive_source_features)
+                joint_features = ada_in(local_another_features, sensitive_source_features)
 
                 all_decode_sensitive_source_features, decode_sensitive_source_features = self.sensitive_encoder(
                         self.decoder(joint_features))
@@ -73,11 +74,18 @@ class Trainer(object):
                 for (decode_sensitive_source_features, sensitive_source_features) in zip(
                         all_decode_sensitive_source_features, all_sensitive_source_features):
                     reconstruction_sensitive_features_loss += F.mse_loss(
-                            sensitive_source_features.mean(1),
-                            decode_sensitive_source_features.mean(1)) + \
+                            sensitive_source_features.mean((2, 3)),
+                            decode_sensitive_source_features.mean((2, 3))) + \
                                     F.mse_loss(
-                            sensitive_source_features.var(1),
-                            decode_sensitive_source_features.var(1))
+                            sensitive_source_features.view(
+                                sensitive_source_features.size(0),
+                                sensitive_source_features.size(1),
+                                -1).var(1),
+                            decode_sensitive_source_features.view(
+                                sensitive_source_features.size(0),
+                                sensitive_source_features.size(1),
+                                -1).var(1),
+                            )
                 reconstruction_sensitive_features_loss += F.mse_loss(
                         sensitive_source_features,
                         decode_sensitive_source_features,
@@ -114,13 +122,3 @@ class Trainer(object):
             print("Epoch: {} ReconLoss: {} SensitiveFeatureLoss: {} LocalFeatureLoss: {} TotalLoss: {}".format(
                 epoch, reconstruction_loss, reconstruction_sensitive_features_loss,
                 reconstruction_local_features_loss, loss))
-
-    def _ada_in(self, content, style):
-        style_mean = style.mean(
-                (2, 3)).unsqueeze(2).unsqueeze(3).expand(
-                        tuple(content.size()))
-        style_var = style.view(
-                style.size(0), style.size(1), -1).var(2).unsqueeze(2).unsqueeze(3).expand(
-                        tuple(content.size()))
-
-        return torch.mul(content, style_var) + style_mean
