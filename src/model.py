@@ -34,7 +34,6 @@ class SensitiveEncoder(nn.Module):
         h3 = self.l3(h2)
         return (h1, h2, h3), h3
 
-
 class Decoder(nn.Module):
 
     def __init__(self):
@@ -68,7 +67,6 @@ def local_conv_layer(input_dim, output_dim, kernel_size, Active=nn.ReLU):
                 kernel_size=kernel_size,
                 padding=1,
                 ),
-            nn.InstanceNorm2d(output_dim),
             Active(),
             nn.MaxPool2d(kernel_size=2, stride=2),
             )
@@ -85,11 +83,10 @@ def sensitive_conv_layer(input_dim, output_dim, kernel_size, Active=nn.ReLU):
             nn.Conv2d(
                 in_channels=output_dim,
                 out_channels=output_dim,
-                dilation=3,
+                dilation=2,
                 kernel_size=kernel_size,
                 stride=2,
                 ),
-            nn.InstanceNorm2d(output_dim),
             Active(),
             nn.MaxPool2d(kernel_size=2, stride=2),
             )
