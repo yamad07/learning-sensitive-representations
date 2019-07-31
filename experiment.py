@@ -1,7 +1,7 @@
 from comet_ml import Experiment
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from src.model import LocalEncoder, SensitiveEncoder, Decoder
+from src.model import Encoder, Decoder
 from src.trainer import Trainer
 from src.dataset import SensitiveDataset
 
@@ -19,11 +19,10 @@ dataset = SensitiveDataset(
             )]
         )
         )
-dataloader = DataLoader(dataset, batch_size=8, shuffle=True)
+dataloader = DataLoader(dataset, batch_size=4, shuffle=True)
 
 trainer = Trainer(
-        local_encoder=LocalEncoder(),
-        sensitive_encoder=SensitiveEncoder(),
+        encoder=Encoder(),
         decoder=Decoder(),
         train_data_loader=dataloader,
         experiment=experiment,

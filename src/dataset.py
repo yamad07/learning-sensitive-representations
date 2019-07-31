@@ -18,9 +18,9 @@ class SensitiveDataset(Dataset):
         source_file_name = random.choice(self.style_file_list)
         another_file_name = self.content_file_list[index]
         source_image = self.transform(
-                resize(io.imread(source_file_name), (224, 224))).float()
+                resize(io.imread(source_file_name), (512, 512))).float()
         another_image = self.transform(
-                resize(io.imread(another_file_name), (224, 224))).float()
+                resize(io.imread(another_file_name), (512, 512))).float()
         return source_image, another_image
 
     def __len__(self):
