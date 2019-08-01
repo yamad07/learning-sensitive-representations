@@ -15,13 +15,19 @@ class SensitiveDataset(Dataset):
         self.transform = transform
 
     def __getitem__(self, index):
-        source_file_name = random.choice(self.style_file_list)
-        another_file_name = self.content_file_list[index]
-        source_image = self.transform(
-                resize(io.imread(source_file_name), (512, 512))).float()
-        another_image = self.transform(
-                resize(io.imread(another_file_name), (512, 512))).float()
+        source_image = self._sampling_image(self.style_file_list)
+        source_image = self.transform(source_image).float()
+
+        another_image = self._sampling_image(self.content_file_list)
+        another_image = self.transform(another_image).float()
         return source_image, another_image
 
     def __len__(self):
         return len(self.content_file_list)
+
+    def _sampling_image(self, file_list):
+        file_name = random.choice(file_list)
+        image = resize(io.imread(file_name), (512, 512))
+        if len(image.shape) != 3:
+            image = self._sampling_image(file_list)
+        return image

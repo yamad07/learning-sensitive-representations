@@ -13,7 +13,9 @@ class Trainer(object):
             decoder,
             train_data_loader,
             experiment,
-            alpha=0.9,
+            alpha=1,
+            beta=1,
+            gamma=1,
             ):
 
         self.encoder = encoder
@@ -25,6 +27,8 @@ class Trainer(object):
         self.decoder_optim = optim.Adam(
                 self.decoder.parameters(), lr=0.0001)
         self.alpha = alpha
+        self.beta = beta
+        self.gamma = gamma
         self.device = torch.device("cuda:1")
         self.experiment = experiment
         self.weight_path = "./weights/"
@@ -38,49 +42,49 @@ class Trainer(object):
         self.decoder.train().to(self.device)
 
         for epoch in range(n_epochs):
-            for i, (source_images, another_images) in enumerate(
+            for i, (style_images, content_images) in enumerate(
                     self.train_data_loader):
 
-                source_images = source_images.to(self.device)
-                another_images = another_images.to(self.device)
+                style_images = style_images.to(self.device)
+                content_images = content_images.to(self.device)
 
-                all_local_source_features, local_source_features = self.encoder(source_images)
-                all_sensitive_source_features, sensitive_source_features = self.encoder(
-                        source_images)
-                decode_images = self.decoder(sensitive_source_features)
-                reconstruction_loss = F.mse_loss(source_images, decode_images)
+                all_content_features, content_features = self.encoder(content_images)
+                decode_images = self.decoder(content_features)
+                reconstruction_loss = F.mse_loss(content_images, decode_images)
 
-                all_local_another_features, local_another_features = self.encoder(another_images)
-                all_sensitive_another_features, sensitive_another_features = self.encoder(another_images)
-                joint_features = ada_in(local_another_features, sensitive_source_features)
+                all_style_features, style_features = self.encoder(style_images)
+                joint_features = ada_in(content_features, style_features)
 
-                all_decode_sensitive_source_features, decode_sensitive_source_features = self.encoder(
+                all_decode_joint_features, decode_joint_features = self.encoder(
                         self.decoder(joint_features))
 
-                reconstruction_sensitive_features_loss = 0
-                for (decode_sensitive_source_features, sensitive_source_features) in zip(
-                        all_decode_sensitive_source_features, all_sensitive_source_features):
-                    reconstruction_sensitive_features_loss += F.mse_loss(
-                            sensitive_source_features.mean((2, 3)),
-                            decode_sensitive_source_features.mean((2, 3))) + \
-                                    F.mse_loss(
-                            sensitive_source_features.view(
-                                sensitive_source_features.size(0),
-                                sensitive_source_features.size(1),
-                                -1).var(2),
-                            decode_sensitive_source_features.view(
-                                sensitive_source_features.size(0),
-                                sensitive_source_features.size(1),
-                                -1).var(2),
-                            )
-                reconstruction_sensitive_features_loss += F.mse_loss(
-                        sensitive_source_features,
-                        decode_sensitive_source_features,
+                reconstruction_content_features_loss = F.mse_loss(
+                        joint_features,
+                        decode_joint_features,
                         )
 
-                loss = self.alpha * reconstruction_loss + (1 - self.alpha) * reconstruction_sensitive_features_loss
+                reconstruction_style_features_loss = 0
+                for (decode_joint_features, style_features) in zip(
+                        all_decode_joint_features, all_style_features):
+                    reconstruction_style_features_loss += F.mse_loss(
+                            style_features.mean((2, 3)),
+                            decode_joint_features.mean((2, 3))) + \
+                                    F.mse_loss(
+                            style_features.view(
+                                style_features.size(0),
+                                style_features.size(1),
+                                -1).var(2),
+                            decode_joint_features.view(
+                                style_features.size(0),
+                                style_features.size(1),
+                                -1).var(2),
+                            )
+
+                loss = self.alpha * reconstruction_content_features_loss + \
+                        self.gamma * reconstruction_style_features_loss + self.beta * reconstruction_loss
                 self.experiment.log_metric("reconstruction-loss", reconstruction_loss)
-                self.experiment.log_metric("reconstruction-sensitive-features-loss", reconstruction_sensitive_features_loss)
+                self.experiment.log_metric("reconstruction-style-features-loss", reconstruction_style_features_loss)
+                self.experiment.log_metric("reconstruction-content-features-loss", reconstruction_content_features_loss)
                 self.experiment.log_metric("total", loss)
                 self.encoder_optim.zero_grad()
                 self.decoder_optim.zero_grad()
@@ -93,5 +97,5 @@ class Trainer(object):
             torch.save(self.decoder.state_dict(),
                     os.path.join(
                         self.weight_path, "Epoch_{}_decoder.pth".format(epoch)))
-            print("Epoch: {} ReconLoss: {} SensitiveFeatureLoss: {} TotalLoss: {}".format(
-                epoch, reconstruction_loss, reconstruction_sensitive_features_loss, loss))
+            print("Epoch: {} ReconLoss: {} StyleFeatureLoss: {} TotalLoss: {}".format(
+                epoch, reconstruction_loss, reconstruction_style_features_loss, loss))

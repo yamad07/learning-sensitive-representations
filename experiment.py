@@ -10,7 +10,7 @@ experiment = Experiment(api_key="laHAJPKUmrD2TV2dIaOWFYGkQ",
 
 dataset = SensitiveDataset(
         content_root_dir="./images/rkrkrk/",
-        style_root_dir="./images/visualmemories_/",
+        style_root_dir="./images/mscoco/",
         transform=transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(
