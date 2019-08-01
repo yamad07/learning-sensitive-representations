@@ -14,11 +14,11 @@ dataset = SensitiveDataset(
         transform=transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(
-                mean=(0.485, 0.456, 0.406),
-                std=(0.229, 0.224, 0.225),
-            )]
-        )
-        )
+                [0.4109, 0.4062, 0.3984],
+                [0.3176, 0.3150, 0.3169],
+            )
+        ])
+    )
 dataloader = DataLoader(dataset, batch_size=4, shuffle=True)
 
 trainer = Trainer(

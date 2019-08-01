@@ -33,7 +33,7 @@ class Decoder(nn.Module):
         x = self.conv_block1(x)
         x = self.conv_block2(x)
         x = self.conv_block3(x)
-        x = self.conv4(x)
+        x = torch.tanh(self.conv4(x))
         return x
 
 
