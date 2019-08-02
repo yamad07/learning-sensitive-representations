@@ -26,5 +26,6 @@ trainer = Trainer(
         decoder=Decoder(),
         train_data_loader=dataloader,
         experiment=experiment,
+        weight_path="experiment/same-encoder"
         )
 trainer.train(1000)

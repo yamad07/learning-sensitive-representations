@@ -13,6 +13,7 @@ class Trainer(object):
             decoder,
             train_data_loader,
             experiment,
+            weight_path,
             alpha=1,
             beta=1,
             gamma=1,
@@ -31,7 +32,9 @@ class Trainer(object):
         self.gamma = gamma
         self.device = torch.device("cuda:1")
         self.experiment = experiment
-        self.weight_path = "./weights/"
+        self.weight_path = os.path.join("./weights/", weight_path)
+        if not os.path.exists(self.weight_path):
+            os.makedirs(self.weight_path)
 
     def train(
             self,
