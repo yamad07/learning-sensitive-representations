@@ -58,50 +58,61 @@ class Trainer(object):
                 all_local_source_features, local_source_features = self.local_encoder(source_images)
                 all_sensitive_source_features, sensitive_source_features = self.sensitive_encoder(
                         source_images)
-                joint_features = ada_in(local_source_features, sensitive_source_features)
-                decode_images = self.decoder(joint_features)
+                joint_source_features = torch.mul(
+                        local_source_features,
+                        sensitive_source_features.expand((
+                            sensitive_source_features.size(0),
+                            sensitive_source_features.size(1),
+                            local_source_features.size(2),
+                            local_source_features.size(3),
+                            ))
+                        )
+                decode_images = self.decoder(joint_source_features)
 
                 reconstruction_loss = F.mse_loss(source_images, decode_images)
 
                 all_local_another_features, local_another_features = self.local_encoder(another_images)
                 all_sensitive_another_features, sensitive_another_features = self.sensitive_encoder(another_images)
-                joint_features = ada_in(local_another_features, sensitive_source_features)
 
-                all_decode_sensitive_source_features, decode_sensitive_source_features = self.sensitive_encoder(
-                        self.decoder(joint_features))
-
-                reconstruction_sensitive_features_loss = 0
-                for (decode_sensitive_source_features, sensitive_source_features) in zip(
-                        all_decode_sensitive_source_features, all_sensitive_source_features):
-                    reconstruction_sensitive_features_loss += F.mse_loss(
-                            sensitive_source_features.mean((2, 3)),
-                            decode_sensitive_source_features.mean((2, 3))) + \
-                                    F.mse_loss(
-                            sensitive_source_features.view(
-                                sensitive_source_features.size(0),
-                                sensitive_source_features.size(1),
-                                -1).var(1),
-                            decode_sensitive_source_features.view(
-                                sensitive_source_features.size(0),
-                                sensitive_source_features.size(1),
-                                -1).var(1),
-                            )
-                reconstruction_sensitive_features_loss += F.mse_loss(
-                        sensitive_source_features,
-                        decode_sensitive_source_features,
+                joint_features = torch.mul(
+                        local_another_features,
+                        sensitive_source_features.expand((
+                            sensitive_another_features.size(0),
+                            sensitive_another_features.size(1),
+                            local_another_features.size(2),
+                            local_another_features.size(3),
+                            ))
                         )
 
-                all_decode_local_source_features, decode_local_source_features = self.local_encoder(
+                all_decode_sensitive_features, decode_sensitive_features = self.sensitive_encoder(
                         self.decoder(joint_features))
-                reconstruction_local_features_loss = F.mse_loss(
-                        local_source_features,
-                        decode_local_source_features)
 
-                loss = self.alpha * reconstruction_loss + self.beta * reconstruction_sensitive_features_loss + \
-                        self.gamma * reconstruction_local_features_loss
+                all_decode_local_features, decode_local_features = self.local_encoder(
+                        self.decoder(joint_features))
+                decode_joint_features = torch.mul(
+                        decode_local_features,
+                        decode_sensitive_features.expand((
+                            decode_sensitive_features.size(0),
+                            decode_sensitive_features.size(1),
+                            decode_local_features.size(2),
+                            decode_local_features.size(3),
+                            ))
+                        )
+
+                joint_features_flat = joint_source_features.view(
+                            joint_source_features.size(0),
+                            joint_source_features.size(1),
+                            -1)
+                decode_joint_features_flat = decode_joint_features.view(
+                            decode_joint_features.size(0),
+                            decode_joint_features.size(1),
+                            -1)
+                adain_style_loss = F.mse_loss(joint_features_flat.mean(2), decode_joint_features_flat.mean(2)) + \
+                        F.mse_loss(joint_features_flat.var(2), decode_joint_features_flat.var(2))
+
+                loss = self.alpha * reconstruction_loss + self.beta * adain_style_loss
                 self.experiment.log_metric("reconstruction-loss", reconstruction_loss)
-                self.experiment.log_metric("reconstruction-sensitive-features-loss", reconstruction_sensitive_features_loss)
-                self.experiment.log_metric("reconstruction-local-features-loss", reconstruction_local_features_loss)
+                self.experiment.log_metric("adain-style-loss", adain_style_loss)
                 self.experiment.log_metric("total", loss)
                 self.local_encoder_optim.zero_grad()
                 self.sensitive_encoder_optim.zero_grad()
@@ -119,6 +130,5 @@ class Trainer(object):
             torch.save(self.decoder.state_dict(),
                     os.path.join(
                         self.weight_path, "Epoch_{}_decoder.pth".format(epoch)))
-            print("Epoch: {} ReconLoss: {} SensitiveFeatureLoss: {} LocalFeatureLoss: {} TotalLoss: {}".format(
-                epoch, reconstruction_loss, reconstruction_sensitive_features_loss,
-                reconstruction_local_features_loss, loss))
+            print("Epoch: {} ReconLoss: {} AdainLoss: {} TotalLoss: {}".format(
+                epoch, reconstruction_loss, adain_style_loss, loss))

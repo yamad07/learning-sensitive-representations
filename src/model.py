@@ -10,7 +10,7 @@ class LocalEncoder(nn.Module):
         self.l1 = local_conv_layer(3, 128, 3)
         self.l2 = local_conv_layer(128, 128, 3)
         self.l3 = local_conv_layer(128, 256, 3)
-        self.l4 = local_conv_layer(256, 256, 3, nn.Tanh)
+        self.l4 = local_conv_layer(256, 256, 3)
 
     def forward(self, x):
         h1 = self.l1(x)
@@ -26,7 +26,7 @@ class SensitiveEncoder(nn.Module):
         super(SensitiveEncoder, self).__init__()
         self.l1 = sensitive_conv_layer(3, 128, 3)
         self.l2 = sensitive_conv_layer(128, 128, 3)
-        self.l3 = sensitive_conv_layer(128, 256, 3, nn.Tanh)
+        self.l3 = sensitive_conv_layer(128, 256, 3)
 
     def forward(self, x):
         h1 = self.l1(x)
@@ -49,7 +49,7 @@ class Decoder(nn.Module):
         x = self.conv_block1(x)
         x = self.conv_block2(x)
         x = self.conv_block3(x)
-        x = self.conv4(x)
+        x = torch.tanh(self.conv4(x))
         return x
 
 
@@ -61,12 +61,14 @@ def local_conv_layer(input_dim, output_dim, kernel_size, Active=nn.ReLU):
                 kernel_size=kernel_size,
                 padding=1,
                 ),
+            nn.InstanceNorm2d(output_dim),
             nn.Conv2d(
                 in_channels=output_dim,
                 out_channels=output_dim,
                 kernel_size=kernel_size,
                 padding=1,
                 ),
+            nn.InstanceNorm2d(output_dim),
             Active(),
             nn.MaxPool2d(kernel_size=2, stride=2),
             )
@@ -80,13 +82,15 @@ def sensitive_conv_layer(input_dim, output_dim, kernel_size, Active=nn.ReLU):
                 kernel_size=kernel_size,
                 padding=1,
                 ),
+            nn.InstanceNorm2d(output_dim),
             nn.Conv2d(
                 in_channels=output_dim,
                 out_channels=output_dim,
-                dilation=2,
+                dilation=3,
                 kernel_size=kernel_size,
                 stride=2,
                 ),
+            nn.InstanceNorm2d(output_dim),
             Active(),
             nn.MaxPool2d(kernel_size=2, stride=2),
             )
@@ -97,6 +101,6 @@ def decoder_layer(input_dim, output_dim,
     return nn.Sequential(
         nn.ConvTranspose2d(input_dim, output_dim,
                            kernel_size=kernel_size, stride=2, padding=padding),
-        nn.BatchNorm2d(output_dim),
+        nn.InstanceNorm2d(output_dim),
         nn.ReLU(inplace=True),
     )
